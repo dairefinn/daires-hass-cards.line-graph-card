@@ -63,11 +63,19 @@ class LineGraphCard extends HTMLElement {
   }
 
   _getPoints() {
-    const pts = this._config.points
-      ? this._config.points.map((y, i) => ({ x: i, y }))
-      : this._history;
+    let pts;
+    if (this._config.points) {
+      const labels = this._config.x_labels;
+      pts = this._config.points.map((y, i) => ({ x: i, y, label: labels?.[i] ?? null }));
+    } else {
+      pts = this._history.map((s) => ({ x: s.x, y: s.y, label: this._formatTime(s.x) }));
+    }
     const max = this._config.max_points;
     return max && pts.length > max ? this._downsample(pts, max) : pts;
+  }
+
+  _formatTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   }
 
   _downsample(pts, max) {
@@ -249,6 +257,7 @@ class LineGraphCard extends HTMLElement {
           <line x1="0" y1="${PAD}" x2="0" y2="${GH - PAD}" stroke="${color}" stroke-width="1" opacity="0.4" vector-effect="non-scaling-stroke"/>
           <circle id="tip-dot" cx="0" cy="0" r="4" fill="${color}"/>
           <rect id="tip-bg" rx="3" fill="${color}" opacity="0.9"/>
+          <text id="tip-lbl" fill="white" font-size="7" text-anchor="middle" dominant-baseline="middle" opacity="0.85"/>
           <text id="tip-txt" fill="white" font-size="8" font-weight="600" text-anchor="middle" dominant-baseline="middle"/>
         </g>
       `;
@@ -326,6 +335,7 @@ class LineGraphCard extends HTMLElement {
     const tipGroup = shadow.getElementById("tip");
     const tipDot = shadow.getElementById("tip-dot");
     const tipBg = shadow.getElementById("tip-bg");
+    const tipLbl = shadow.getElementById("tip-lbl");
     const tipTxt = shadow.getElementById("tip-txt");
     const svg = shadow.querySelector("svg");
     if (!overlay || !svg) return;
@@ -346,9 +356,12 @@ class LineGraphCard extends HTMLElement {
 
       const c = coords[nearestIdx];
       const val = +pts[nearestIdx].y.toFixed(1);
-      const label = `${val}${unit}`;
-      const tipW = label.length * 5 + 10;
-      const tipH = 14;
+      const valLabel = `${val}${unit}`;
+      const xLabel = pts[nearestIdx].label;
+      const hasLabel = Boolean(xLabel);
+
+      const tipW = Math.max(valLabel.length * 5 + 10, hasLabel ? xLabel.length * 4 + 10 : 0);
+      const tipH = hasLabel ? 24 : 14;
       // bubble x offset relative to the group origin so it stays in bounds
       const bubbleX = Math.min(Math.max(c.sx, tipW / 2 + PAD), GW - PAD - tipW / 2) - c.sx;
       const tipY = c.sy > GH / 2 ? c.sy - tipH - 5 : c.sy + 5;
@@ -359,9 +372,20 @@ class LineGraphCard extends HTMLElement {
       tipBg.setAttribute("y", tipY);
       tipBg.setAttribute("width", tipW);
       tipBg.setAttribute("height", tipH);
-      tipTxt.setAttribute("x", bubbleX);
-      tipTxt.setAttribute("y", tipY + tipH / 2);
-      tipTxt.textContent = label;
+
+      if (hasLabel) {
+        tipLbl.textContent = xLabel;
+        tipLbl.setAttribute("x", bubbleX);
+        tipLbl.setAttribute("y", tipY + 7);
+        tipLbl.style.display = "";
+        tipTxt.setAttribute("x", bubbleX);
+        tipTxt.setAttribute("y", tipY + 17);
+      } else {
+        tipLbl.style.display = "none";
+        tipTxt.setAttribute("x", bubbleX);
+        tipTxt.setAttribute("y", tipY + tipH / 2);
+      }
+      tipTxt.textContent = valLabel;
 
       tipGroup.style.display = "";
     });

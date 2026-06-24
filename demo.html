@@ -86,6 +86,10 @@
   <daires-hass-cards-line-graph-card id="bg-dark"></daires-hass-cards-line-graph-card>
   <daires-hass-cards-line-graph-card id="bg-tinted"></daires-hass-cards-line-graph-card>
 
+  <h2>x_labels (hover to see labels in tooltip)</h2>
+  <daires-hass-cards-line-graph-card id="xlbl-days"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="xlbl-times"></daires-hass-cards-line-graph-card>
+
   <h2>interactions</h2>
   <daires-hass-cards-line-graph-card id="int-tap-more-info"></daires-hass-cards-line-graph-card>
   <daires-hass-cards-line-graph-card id="int-tap-navigate"></daires-hass-cards-line-graph-card>
@@ -205,6 +209,22 @@
     document.getElementById("bg-tinted").setConfig({
       title: "background: #e3f2fd", points: WAVE, unit: "%", color: "#1565c0",
       background: "#e3f2fd",
+    });
+
+    // ── x_labels ──────────────────────────────────────────────────────────────
+    document.getElementById("xlbl-days").setConfig({
+      title: "x_labels: days",
+      points: [18, 22, 19, 25, 28, 24, 21],
+      unit: "°C", color: "#ff7043",
+      x_labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      label: "Weekly temperature",
+    });
+    document.getElementById("xlbl-times").setConfig({
+      title: "x_labels: hourly",
+      points: WAVE,
+      unit: "%", color: "#03a9f4",
+      x_labels: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`),
+      label: "Last 24 h",
     });
 
     // ── interactions ──────────────────────────────────────────────────────────

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Line Graph Card Demo</title>
+  <style>
+    body {
+      background: #f0f4f8;
+      font-family: sans-serif;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      padding: 32px;
+      justify-content: center;
+    }
+    h1 {
+      width: 100%;
+      text-align: center;
+      color: #333;
+      margin-bottom: 0;
+    }
+    h2 {
+      width: 100%;
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 8px 0 0;
+    }
+    p.sub {
+      width: 100%;
+      text-align: center;
+      color: #666;
+      margin-top: 4px;
+    }
+    daires-hass-cards-line-graph-card {
+      width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Line Graph Card Demo</h1>
+  <p class="sub">Static previews — no Home Assistant required</p>
+
+  <h2>Examples</h2>
+  <daires-hass-cards-line-graph-card id="ex-temp"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="ex-energy"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="ex-solar"></daires-hass-cards-line-graph-card>
+
+  <h2>color</h2>
+  <daires-hass-cards-line-graph-card id="color-blue"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="color-green"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="color-red"></daires-hass-cards-line-graph-card>
+
+  <h2>stroke_width (screen pixels — fractional values supported)</h2>
+  <daires-hass-cards-line-graph-card id="stroke-thin"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="stroke-default"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="stroke-thick"></daires-hass-cards-line-graph-card>
+
+  <h2>fill</h2>
+  <daires-hass-cards-line-graph-card id="fill-on"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="fill-off"></daires-hass-cards-line-graph-card>
+
+  <h2>show_dots</h2>
+  <daires-hass-cards-line-graph-card id="dots-off"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="dots-on"></daires-hass-cards-line-graph-card>
+
+  <h2>show_end_label</h2>
+  <daires-hass-cards-line-graph-card id="end-label-on"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="end-label-off"></daires-hass-cards-line-graph-card>
+
+  <h2>max_points</h2>
+  <daires-hass-cards-line-graph-card id="mp-none"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="mp-24"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="mp-8"></daires-hass-cards-line-graph-card>
+
+  <h2>min &amp; max</h2>
+  <daires-hass-cards-line-graph-card id="range-auto"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="range-zero"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="range-explicit"></daires-hass-cards-line-graph-card>
+
+  <h2>background</h2>
+  <daires-hass-cards-line-graph-card id="bg-white"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="bg-dark"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="bg-tinted"></daires-hass-cards-line-graph-card>
+
+  <h2>interactions</h2>
+  <daires-hass-cards-line-graph-card id="int-tap-more-info"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="int-tap-navigate"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="int-multi"></daires-hass-cards-line-graph-card>
+
+  <script>
+    if (!customElements.get("ha-card")) {
+      customElements.define("ha-card", class extends HTMLElement {
+        connectedCallback() {
+          this.style.cssText = "display:block;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);overflow:hidden;";
+        }
+      });
+    }
+  </script>
+  <script src="line-graph-card.js"></script>
+  <script>
+    const WAVE = [42, 45, 43, 47, 50, 52, 49, 53, 58, 62, 65, 63, 60, 57, 55, 58, 61, 64, 62, 59, 56, 54, 51, 48];
+
+    // ── Examples ──────────────────────────────────────────────────────────────
+    document.getElementById("ex-temp").setConfig({
+      title: "Temperature",
+      points: [19.2, 18.8, 18.5, 18.1, 17.9, 18.0, 18.6, 19.4, 20.3, 21.1, 21.8, 22.4, 22.9, 23.1, 23.0, 22.7, 22.3, 21.8, 21.2, 20.6, 20.1, 19.8, 19.5, 19.2],
+      unit: "°C", color: "#ff7043", label: "Living Room · Last 24 h",
+    });
+    document.getElementById("ex-energy").setConfig({
+      title: "Energy Usage",
+      points: [0.4, 0.3, 0.3, 0.2, 0.2, 0.3, 1.1, 2.4, 1.8, 1.2, 1.0, 1.3, 1.5, 1.4, 1.1, 0.9, 1.2, 2.1, 2.8, 2.3, 1.6, 1.1, 0.7, 0.5],
+      unit: " kW", color: "#ff9800", label: "Whole home · Last 24 h",
+    });
+    document.getElementById("ex-solar").setConfig({
+      title: "Solar Power",
+      points: [0, 0, 0, 0, 0, 0, 0.1, 0.4, 1.2, 2.5, 3.8, 4.6, 5.1, 4.9, 4.3, 3.5, 2.4, 1.3, 0.5, 0.1, 0, 0, 0, 0],
+      unit: " kW", color: "#4caf50", label: "Roof panels · Last 24 h",
+    });
+
+    // ── color ─────────────────────────────────────────────────────────────────
+    document.getElementById("color-blue").setConfig({
+      title: "color: #03a9f4", points: WAVE, unit: "%", color: "#03a9f4", label: "Blue",
+    });
+    document.getElementById("color-green").setConfig({
+      title: "color: #4caf50", points: WAVE, unit: "%", color: "#4caf50", label: "Green",
+    });
+    document.getElementById("color-red").setConfig({
+      title: "color: #f44336", points: WAVE, unit: "%", color: "#f44336", label: "Red",
+    });
+
+    // ── stroke_width ──────────────────────────────────────────────────────────
+    document.getElementById("stroke-thin").setConfig({
+      title: "stroke_width: 0.5", points: WAVE, unit: "%", color: "#9c27b0", stroke_width: 0.5,
+    });
+    document.getElementById("stroke-default").setConfig({
+      title: "stroke_width: 2 (default)", points: WAVE, unit: "%", color: "#9c27b0", stroke_width: 2,
+    });
+    document.getElementById("stroke-thick").setConfig({
+      title: "stroke_width: 4", points: WAVE, unit: "%", color: "#9c27b0", stroke_width: 4,
+    });
+
+    // ── fill ──────────────────────────────────────────────────────────────────
+    document.getElementById("fill-on").setConfig({
+      title: "fill: true (default)", points: WAVE, unit: "%", color: "#00bcd4", fill: true,
+    });
+    document.getElementById("fill-off").setConfig({
+      title: "fill: false", points: WAVE, unit: "%", color: "#00bcd4", fill: false,
+    });
+
+    // ── show_dots ─────────────────────────────────────────────────────────────
+    document.getElementById("dots-off").setConfig({
+      title: "show_dots: false (default)", points: WAVE, unit: "%", color: "#607d8b", show_dots: false,
+    });
+    document.getElementById("dots-on").setConfig({
+      title: "show_dots: true", points: WAVE, unit: "%", color: "#607d8b", show_dots: true,
+    });
+
+    // ── max_points ────────────────────────────────────────────────────────────
+    const NOISY = Array.from({ length: 96 }, (_, i) => 20 + 15 * Math.sin(i / 8) + (Math.random() * 10 - 5));
+    document.getElementById("mp-none").setConfig({
+      title: "max_points: unlimited (96 pts)", points: NOISY, unit: "°C", color: "#ff7043",
+    });
+    document.getElementById("mp-24").setConfig({
+      title: "max_points: 24", points: NOISY, unit: "°C", color: "#ff7043", max_points: 24,
+    });
+    document.getElementById("mp-8").setConfig({
+      title: "max_points: 8", points: NOISY, unit: "°C", color: "#ff7043", max_points: 8,
+    });
+
+    // ── show_end_label ────────────────────────────────────────────────────────
+    document.getElementById("end-label-on").setConfig({
+      title: "show_end_label: true (default)", points: WAVE, unit: "%", color: "#03a9f4",
+    });
+    document.getElementById("end-label-off").setConfig({
+      title: "show_end_label: false", points: WAVE, unit: "%", color: "#03a9f4", show_end_label: false,
+    });
+
+    // ── min & max ─────────────────────────────────────────────────────────────
+    const SPARSE = [62, 65, 63, 68, 71, 69, 73, 70, 67, 64, 66, 69];
+    document.getElementById("range-auto").setConfig({
+      title: "min/max: auto (default)", points: SPARSE, unit: "%", color: "#ff9800",
+      label: "Chart fills to data range",
+    });
+    document.getElementById("range-zero").setConfig({
+      title: "min: 0", points: SPARSE, unit: "%", color: "#ff9800", min: 0,
+      label: "Anchored to zero",
+    });
+    document.getElementById("range-explicit").setConfig({
+      title: "min: 0  max: 100", points: SPARSE, unit: "%", color: "#ff9800", min: 0, max: 100,
+      label: "Explicit full range",
+    });
+
+    // ── background ────────────────────────────────────────────────────────────
+    document.getElementById("bg-white").setConfig({
+      title: "background: #fff (default)", points: WAVE, unit: "%", color: "#03a9f4",
+    });
+    document.getElementById("bg-dark").setConfig({
+      title: "background: #1c1c1e", points: WAVE, unit: "%", color: "#03a9f4",
+      background: "#1c1c1e",
+    });
+    document.getElementById("bg-tinted").setConfig({
+      title: "background: #e3f2fd", points: WAVE, unit: "%", color: "#1565c0",
+      background: "#e3f2fd",
+    });
+
+    // ── interactions ──────────────────────────────────────────────────────────
+    document.getElementById("int-tap-more-info").setConfig({
+      title: "Tap: more-info", points: WAVE, unit: "%", color: "#03a9f4",
+      interactions: [{ action: "more-info", entity: "sensor.temperature" }],
+    });
+    document.getElementById("int-tap-navigate").setConfig({
+      title: "Tap: navigate", points: WAVE, unit: "%", color: "#ff7043",
+      interactions: [{ action: "navigate", path: "/lovelace/energy" }],
+    });
+    document.getElementById("int-multi").setConfig({
+      title: "Tap + hold", points: WAVE, unit: "%", color: "#4caf50",
+      interactions: [
+        { trigger: "tap", action: "more-info", entity: "sensor.temperature" },
+        { trigger: "hold", action: "navigate", path: "/lovelace/energy" },
+      ],
+    });
+
+    document.addEventListener("hass-more-info", (e) => alert(`more-info: ${e.detail.entityId}`));
+    document.addEventListener("location-changed", () => alert(`navigate: ${window.location.pathname}`));
+  </script>
+</body>
+</html>

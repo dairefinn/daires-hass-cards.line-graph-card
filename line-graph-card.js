@@ -71,7 +71,17 @@ class LineGraphCard extends HTMLElement {
       pts = this._history.map((s) => ({ x: s.x, y: s.y, label: this._formatTime(s.x) }));
     }
     const max = this._config.max_points;
-    return max && pts.length > max ? this._downsample(pts, max) : pts;
+
+    if (max && pts.length > max) {
+      return this._downsample(pts, max);
+    }
+
+    // Guarantee a minimum of 2 points for rendering
+    if (pts.length === 1) {
+      pts = [pts[0], { ...pts[0], x: pts[0].x + 1 }];
+    }
+
+    return pts;
   }
 
   _formatTime(ts) {

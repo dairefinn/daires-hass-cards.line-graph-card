@@ -13,8 +13,11 @@ class LineGraphCard extends HTMLElement {
     if (entity && entity !== this._lastEntity) {
       this._lastEntity = entity;
       this._fetchHistory();
+      return;
     }
-    this._render();
+    if (!entity) {
+      this._render();
+    }
   }
 
   setConfig(config) {
@@ -74,11 +77,6 @@ class LineGraphCard extends HTMLElement {
 
     if (max && pts.length > max) {
       return this._downsample(pts, max);
-    }
-
-    // Guarantee a minimum of 2 points for rendering
-    if (pts.length === 1) {
-      pts = [pts[0], { ...pts[0], x: pts[0].x + 1 }];
     }
 
     return pts;
@@ -309,6 +307,17 @@ class LineGraphCard extends HTMLElement {
         </g>
         ${xAxisSvg}
       `;
+    } else if (points.length === 1) {
+      const val = +points[0].y.toFixed(1);
+      currentDisplay = `${val}${unit}`;
+      const px = GW - PAD;
+      const py = GH / 2;
+      this._renderedCoords = null;
+      this._renderedPoints = null;
+      svgContent = `
+        <circle cx="${px}" cy="${py}" r="3.5" fill="${color}" />
+        ${config.show_end_label !== false ? `<text x="${px - 6}" y="${py + 4}" text-anchor="end" fill="${color}" font-size="9" font-weight="600">${val}</text>` : ""}
+      `;
     } else {
       this._renderedCoords = null;
       svgContent = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="var(--secondary-text-color, #727272)" font-size="11">No data</text>`;
@@ -396,26 +405,42 @@ class LineGraphCard extends HTMLElement {
       const rect = svg.getBoundingClientRect();
       const mx = (e.clientX - rect.left) * (GW / rect.width);
 
-      let nearestIdx = 0, minDist = Infinity;
-      for (let i = 0; i < coords.length; i++) {
-        const d = Math.abs(coords[i].sx - mx);
-        if (d < minDist) { minDist = d; nearestIdx = i; }
+      // Find the bracketing segment
+      let leftIdx = 0;
+      for (let i = 0; i < coords.length - 1; i++) {
+        if (coords[i].sx <= mx) leftIdx = i;
+      }
+      const rightIdx = Math.min(leftIdx + 1, coords.length - 1);
+
+      let interpY, interpSy, xLabel;
+      if (leftIdx === rightIdx) {
+        interpY = pts[leftIdx].y;
+        interpSy = coords[leftIdx].sy;
+        xLabel = pts[leftIdx].label;
+      } else {
+        const lx = coords[leftIdx].sx, rx = coords[rightIdx].sx;
+        const t = (mx - lx) / (rx - lx);
+        interpY = pts[leftIdx].y + t * (pts[rightIdx].y - pts[leftIdx].y);
+        interpSy = coords[leftIdx].sy + t * (coords[rightIdx].sy - coords[leftIdx].sy);
+        if (this._config.entity) {
+          const interpTs = pts[leftIdx].x + t * (pts[rightIdx].x - pts[leftIdx].x);
+          xLabel = this._formatTime(interpTs);
+        } else {
+          xLabel = t < 0.5 ? pts[leftIdx].label : pts[rightIdx].label;
+        }
       }
 
-      const c = coords[nearestIdx];
-      const val = +pts[nearestIdx].y.toFixed(1);
+      const val = +interpY.toFixed(1);
       const valLabel = `${val}${unit}`;
-      const xLabel = pts[nearestIdx].label;
       const hasLabel = Boolean(xLabel);
 
       const tipW = Math.max(valLabel.length * 5 + 10, hasLabel ? xLabel.length * 4 + 10 : 0);
       const tipH = hasLabel ? 24 : 14;
-      // bubble x offset relative to the group origin so it stays in bounds
-      const bubbleX = Math.min(Math.max(c.sx, tipW / 2 + PAD), GW - PAD - tipW / 2) - c.sx;
-      const tipY = c.sy > GH / 2 ? c.sy - tipH - 5 : c.sy + 5;
+      const bubbleX = Math.min(Math.max(mx, tipW / 2 + PAD), GW - PAD - tipW / 2) - mx;
+      const tipY = interpSy > GH / 2 ? interpSy - tipH - 5 : interpSy + 5;
 
-      tipGroup.setAttribute("transform", `translate(${c.sx}, 0)`);
-      tipDot.setAttribute("cy", c.sy);
+      tipGroup.setAttribute("transform", `translate(${mx}, 0)`);
+      tipDot.setAttribute("cy", interpSy);
       tipBg.setAttribute("x", bubbleX - tipW / 2);
       tipBg.setAttribute("y", tipY);
       tipBg.setAttribute("width", tipW);

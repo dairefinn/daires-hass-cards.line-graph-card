@@ -1,3 +1,11 @@
+const GW = 300;
+const GH = 100;
+const PAD = 6;
+const LABEL_H = 14;
+const TAP_DELAY = 250;
+const HOLD_DELAY = 500;
+const REFRESH_INTERVAL = 5 * 60 * 1000;
+
 class LineGraphCard extends HTMLElement {
   constructor() {
     super();
@@ -62,7 +70,7 @@ class LineGraphCard extends HTMLElement {
       console.error("LineGraphCard: history fetch failed", e);
     }
 
-    this._refreshTimer = setTimeout(() => this._fetchHistory(), 5 * 60 * 1000);
+    this._refreshTimer = setTimeout(() => this._fetchHistory(), REFRESH_INTERVAL);
   }
 
   _getPoints() {
@@ -74,11 +82,9 @@ class LineGraphCard extends HTMLElement {
       pts = this._history.map((s) => ({ x: s.x, y: s.y, label: this._formatTime(s.x) }));
     }
     const max = this._config.max_points;
-
     if (max && pts.length > max) {
       return this._downsample(pts, max);
     }
-
     return pts;
   }
 
@@ -95,7 +101,7 @@ class LineGraphCard extends HTMLElement {
     return result;
   }
 
-  _buildPath(coords, graphW, graphH, pad) {
+  _buildPath(coords) {
     if (coords.length < 2) return { line: "", fill: "" };
 
     let d = `M ${coords[0].sx} ${coords[0].sy}`;
@@ -108,10 +114,29 @@ class LineGraphCard extends HTMLElement {
 
     const last = coords[coords.length - 1];
     const first = coords[0];
-    const baseline = graphH - pad;
-    const fill = `${d} L ${last.sx} ${baseline} L ${first.sx} ${baseline} Z`;
+    const fill = `${d} L ${last.sx} ${GH - PAD} L ${first.sx} ${GH - PAD} Z`;
 
     return { line: d, fill };
+  }
+
+  _buildYAxisSvg(toY, minY, maxY, unit, yCount) {
+    return Array.from({ length: yCount }, (_, i) => {
+      const val = minY + (i / (yCount - 1)) * (maxY - minY);
+      return `<text x="${PAD + 2}" y="${toY(val)}" text-anchor="start" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" opacity="0.7" pointer-events="none">${+val.toFixed(1)}${unit}</text>`;
+    }).join("");
+  }
+
+  _buildTooltipSvg(color) {
+    return `
+      <rect id="tip-overlay" x="${PAD}" y="0" width="${GW - PAD * 2}" height="${GH}" fill="transparent" style="cursor:crosshair"/>
+      <g id="tip" style="display:none;pointer-events:none;">
+        <line x1="0" y1="${PAD}" x2="0" y2="${GH - PAD}" stroke="${color}" stroke-width="1" opacity="0.4" vector-effect="non-scaling-stroke"/>
+        <circle id="tip-dot" cx="0" cy="0" r="4" fill="${color}"/>
+        <rect id="tip-bg" rx="3" fill="${color}" opacity="0.9"/>
+        <text id="tip-lbl" fill="white" font-size="7" text-anchor="middle" dominant-baseline="middle" opacity="0.85"/>
+        <text id="tip-txt" fill="white" font-size="8" font-weight="600" text-anchor="middle" dominant-baseline="middle"/>
+      </g>
+    `;
   }
 
   _primaryEntity() {
@@ -175,7 +200,7 @@ class LineGraphCard extends HTMLElement {
             this._tapCount = 0;
             this._tapTimer = null;
             this._handleInteraction("tap");
-          }, 250);
+          }, TAP_DELAY);
         } else {
           clearTimeout(this._tapTimer);
           this._tapTimer = null;
@@ -187,7 +212,7 @@ class LineGraphCard extends HTMLElement {
 
     if (triggers.has("hold")) {
       let holdTimer;
-      const startHold = () => { holdTimer = setTimeout(() => this._handleInteraction("hold"), 500); };
+      const startHold = () => { holdTimer = setTimeout(() => this._handleInteraction("hold"), HOLD_DELAY); };
       const cancelHold = () => clearTimeout(holdTimer);
       card.addEventListener("mousedown", startHold);
       card.addEventListener("mouseup", cancelHold);
@@ -217,11 +242,6 @@ class LineGraphCard extends HTMLElement {
     const showFill = config.fill !== false;
     const showDots = config.show_dots === true;
     const unit = config.unit ?? "";
-
-    const GW = 300;
-    const GH = 100;
-    const PAD = 6;
-    const LABEL_H = 14;
     const showXLabels = config.show_x_labels !== false;
     const showYLabels = config.show_y_labels !== false;
 
@@ -245,7 +265,7 @@ class LineGraphCard extends HTMLElement {
       const toY = (y) => GH - PAD - ((Math.min(Math.max(y, minY), maxY) - minY) / rangeY) * (GH - PAD * 2);
 
       const coords = points.map((p) => ({ sx: toX(p.x), sy: toY(p.y) }));
-      const { line, fill } = this._buildPath(coords, GW, GH, PAD);
+      const { line, fill } = this._buildPath(coords);
       const last = coords[coords.length - 1];
       const lastVal = points[points.length - 1].y;
 
@@ -258,7 +278,6 @@ class LineGraphCard extends HTMLElement {
       this._renderedCoords = coords;
       this._renderedPoints = points;
 
-      // X-axis labels (rendered below the graph)
       const hasXLabels = points.some((p) => p.label);
       let xAxisSvg = "";
       if (showXLabels && hasXLabels) {
@@ -267,7 +286,7 @@ class LineGraphCard extends HTMLElement {
         xAxisSvg = Array.from({ length: xCount }, (_, i) => {
           const targetX = minX + (i / (xCount - 1)) * rangeX;
           let lbl;
-          if (this._config.entity) {
+          if (config.entity) {
             lbl = this._formatTime(targetX);
           } else {
             let nearestIdx = 0, minDist = Infinity;
@@ -284,16 +303,9 @@ class LineGraphCard extends HTMLElement {
         }).join("");
       }
 
-      // Y-axis labels (overlaid on the left of the graph)
-      let yAxisSvg = "";
-      if (showYLabels) {
-        const yCount = Math.max(2, config.y_label_count ?? 3);
-        yAxisSvg = Array.from({ length: yCount }, (_, i) => {
-          const val = minY + (i / (yCount - 1)) * (maxY - minY);
-          const cy = toY(val);
-          return `<text x="${PAD + 2}" y="${cy}" text-anchor="start" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" opacity="0.7" pointer-events="none">${+val.toFixed(1)}${unit}</text>`;
-        }).join("");
-      }
+      const yAxisSvg = showYLabels
+        ? this._buildYAxisSvg(toY, minY, maxY, unit, Math.max(2, config.y_label_count ?? 3))
+        : "";
 
       svgContent = `
         ${showFill ? `<path d="${fill}" fill="${color}" opacity="0.12" />` : ""}
@@ -302,14 +314,7 @@ class LineGraphCard extends HTMLElement {
         <circle cx="${last.sx}" cy="${last.sy}" r="3.5" fill="${color}" />
         ${config.show_end_label !== false ? `<text x="${labelX}" y="${last.sy + 4}" text-anchor="${textAnchor}" fill="${color}" font-size="9" font-weight="600">${displayVal}</text>` : ""}
         ${yAxisSvg}
-        <rect id="tip-overlay" x="${PAD}" y="0" width="${GW - PAD * 2}" height="${GH}" fill="transparent" style="cursor:crosshair"/>
-        <g id="tip" style="display:none;pointer-events:none;">
-          <line x1="0" y1="${PAD}" x2="0" y2="${GH - PAD}" stroke="${color}" stroke-width="1" opacity="0.4" vector-effect="non-scaling-stroke"/>
-          <circle id="tip-dot" cx="0" cy="0" r="4" fill="${color}"/>
-          <rect id="tip-bg" rx="3" fill="${color}" opacity="0.9"/>
-          <text id="tip-lbl" fill="white" font-size="7" text-anchor="middle" dominant-baseline="middle" opacity="0.85"/>
-          <text id="tip-txt" fill="white" font-size="8" font-weight="600" text-anchor="middle" dominant-baseline="middle"/>
-        </g>
+        ${this._buildTooltipSvg(color)}
         ${xAxisSvg}
       `;
     } else if (points.length === 1) {
@@ -329,13 +334,8 @@ class LineGraphCard extends HTMLElement {
 
       let yAxisSvg = "";
       if (showYLabels) {
-        const yCount = Math.max(2, config.y_label_count ?? 3);
         if (maxY > minY) {
-          yAxisSvg = Array.from({ length: yCount }, (_, i) => {
-            const v = minY + (i / (yCount - 1)) * (maxY - minY);
-            const cy = toY(v);
-            return `<text x="${PAD + 2}" y="${cy}" text-anchor="start" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" opacity="0.7" pointer-events="none">${+v.toFixed(1)}${unit}</text>`;
-          }).join("");
+          yAxisSvg = this._buildYAxisSvg(toY, minY, maxY, unit, Math.max(2, config.y_label_count ?? 3));
         } else {
           yAxisSvg = `<text x="${PAD + 2}" y="${py}" text-anchor="start" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" opacity="0.7" pointer-events="none">${val}${unit}</text>`;
         }
@@ -343,17 +343,15 @@ class LineGraphCard extends HTMLElement {
 
       let xAxisSvg = "";
       if (showXLabels) {
-        if (this._config.entity) {
+        if (config.entity) {
           totalH = GH + LABEL_H;
           const xCount = Math.max(2, config.x_label_count ?? 4);
           const windowEnd = Date.now();
           const windowStart = windowEnd - (config.hours ?? 24) * 3600 * 1000;
           xAxisSvg = Array.from({ length: xCount }, (_, i) => {
             const ts = windowStart + (i / (xCount - 1)) * (windowEnd - windowStart);
-            const lbl = this._formatTime(ts);
-            const cx = PAD + (i / (xCount - 1)) * (GW - PAD * 2);
             const anchor = i === 0 ? "start" : i === xCount - 1 ? "end" : "middle";
-            return `<text x="${cx}" y="${GH + LABEL_H / 2}" text-anchor="${anchor}" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" pointer-events="none">${lbl}</text>`;
+            return `<text x="${PAD + (i / (xCount - 1)) * (GW - PAD * 2)}" y="${GH + LABEL_H / 2}" text-anchor="${anchor}" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" pointer-events="none">${this._formatTime(ts)}</text>`;
           }).join("");
         } else if (points[0].label) {
           totalH = GH + LABEL_H;
@@ -370,14 +368,7 @@ class LineGraphCard extends HTMLElement {
         <circle cx="${px}" cy="${py}" r="3.5" fill="${color}" />
         ${config.show_end_label !== false ? `<text x="${px - 6}" y="${py + 4}" text-anchor="end" fill="${color}" font-size="9" font-weight="600">${val}</text>` : ""}
         ${yAxisSvg}
-        <rect id="tip-overlay" x="${PAD}" y="0" width="${GW - PAD * 2}" height="${GH}" fill="transparent" style="cursor:crosshair"/>
-        <g id="tip" style="display:none;pointer-events:none;">
-          <line x1="0" y1="${PAD}" x2="0" y2="${GH - PAD}" stroke="${color}" stroke-width="1" opacity="0.4" vector-effect="non-scaling-stroke"/>
-          <circle id="tip-dot" cx="0" cy="0" r="4" fill="${color}"/>
-          <rect id="tip-bg" rx="3" fill="${color}" opacity="0.9"/>
-          <text id="tip-lbl" fill="white" font-size="7" text-anchor="middle" dominant-baseline="middle" opacity="0.85"/>
-          <text id="tip-txt" fill="white" font-size="8" font-weight="600" text-anchor="middle" dominant-baseline="middle"/>
-        </g>
+        ${this._buildTooltipSvg(color)}
         ${xAxisSvg}
       `;
     } else {
@@ -459,7 +450,6 @@ class LineGraphCard extends HTMLElement {
     const svg = shadow.querySelector("svg");
     if (!overlay || !svg) return;
 
-    const GW = 300, GH = 100, PAD = 6;
     const pts = this._renderedPoints;
     const unit = this._config.unit ?? "";
 
@@ -467,7 +457,6 @@ class LineGraphCard extends HTMLElement {
       const rect = svg.getBoundingClientRect();
       const mx = (e.clientX - rect.left) * (GW / rect.width);
 
-      // Find the bracketing segment
       let leftIdx = 0;
       for (let i = 0; i < coords.length - 1; i++) {
         if (coords[i].sx <= mx) leftIdx = i;
@@ -567,6 +556,19 @@ class LineGraphCardEditor extends HTMLElement {
     this._fire();
   }
 
+  _wireCheckbox(id, key, defaultTrue) {
+    const el = this.shadowRoot.getElementById(id);
+    el.checked = defaultTrue ? this._config[key] !== false : this._config[key] === true;
+    el.addEventListener("change", (e) => {
+      if (e.target.checked === defaultTrue) {
+        delete this._config[key];
+      } else {
+        this._config[key] = !defaultTrue;
+      }
+      this._fire();
+    });
+  }
+
   _render() {
     const c = this._config ?? {};
     this.shadowRoot.innerHTML = `
@@ -649,54 +651,11 @@ class LineGraphCardEditor extends HTMLElement {
       });
     }
 
-    const fillEl = get("fill");
-    fillEl.checked = c.fill !== false;
-    fillEl.addEventListener("change", (e) => {
-      if (e.target.checked) {
-        delete this._config.fill;
-      } else {
-        this._config.fill = false;
-      }
-      this._fire();
-    });
-
-    const dotsEl = get("show_dots");
-    dotsEl.checked = c.show_dots === true;
-    dotsEl.addEventListener("change", (e) => {
-      if (e.target.checked) {
-        this._config.show_dots = true;
-      } else {
-        delete this._config.show_dots;
-      }
-      this._fire();
-    });
-
-    const endLabelEl = get("show_end_label");
-    endLabelEl.checked = c.show_end_label !== false;
-    endLabelEl.addEventListener("change", (e) => {
-      if (e.target.checked) {
-        delete this._config.show_end_label;
-      } else {
-        this._config.show_end_label = false;
-      }
-      this._fire();
-    });
-
-    const showXLabelsEl = get("show_x_labels");
-    showXLabelsEl.checked = c.show_x_labels !== false;
-    showXLabelsEl.addEventListener("change", (e) => {
-      if (e.target.checked) { delete this._config.show_x_labels; }
-      else { this._config.show_x_labels = false; }
-      this._fire();
-    });
-
-    const showYLabelsEl = get("show_y_labels");
-    showYLabelsEl.checked = c.show_y_labels !== false;
-    showYLabelsEl.addEventListener("change", (e) => {
-      if (e.target.checked) { delete this._config.show_y_labels; }
-      else { this._config.show_y_labels = false; }
-      this._fire();
-    });
+    this._wireCheckbox("fill", "fill", true);
+    this._wireCheckbox("show_dots", "show_dots", false);
+    this._wireCheckbox("show_end_label", "show_end_label", true);
+    this._wireCheckbox("show_x_labels", "show_x_labels", true);
+    this._wireCheckbox("show_y_labels", "show_y_labels", true);
   }
 }
 

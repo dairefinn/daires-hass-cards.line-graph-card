@@ -223,9 +223,13 @@ class LineGraphCard extends HTMLElement {
     const GW = 300;
     const GH = 100;
     const PAD = 6;
+    const LABEL_H = 14;
+    const showXLabels = config.show_x_labels !== false;
+    const showYLabels = config.show_y_labels !== false;
 
     let svgContent;
     let currentDisplay = "—";
+    let totalH = GH;
 
     if (points.length >= 2) {
       const xs = points.map((p) => p.x);
@@ -256,12 +260,42 @@ class LineGraphCard extends HTMLElement {
       this._renderedCoords = coords;
       this._renderedPoints = points;
 
+      // X-axis labels (rendered below the graph)
+      const hasXLabels = points.some((p) => p.label);
+      let xAxisSvg = "";
+      if (showXLabels && hasXLabels) {
+        totalH = GH + LABEL_H;
+        const xCount = Math.max(2, Math.min(config.x_label_count ?? 4, points.length));
+        const xIndices = Array.from({ length: xCount }, (_, i) =>
+          Math.round((i * (points.length - 1)) / (xCount - 1))
+        );
+        xAxisSvg = xIndices.map((idx, i) => {
+          const lbl = points[idx].label;
+          if (!lbl) return "";
+          const cx = coords[idx].sx;
+          const anchor = i === 0 ? "start" : i === xIndices.length - 1 ? "end" : "middle";
+          return `<text x="${cx}" y="${GH + LABEL_H / 2}" text-anchor="${anchor}" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" pointer-events="none">${lbl}</text>`;
+        }).join("");
+      }
+
+      // Y-axis labels (overlaid on the left of the graph)
+      let yAxisSvg = "";
+      if (showYLabels) {
+        const yCount = Math.max(2, config.y_label_count ?? 3);
+        yAxisSvg = Array.from({ length: yCount }, (_, i) => {
+          const val = minY + (i / (yCount - 1)) * (maxY - minY);
+          const cy = toY(val);
+          return `<text x="${PAD + 2}" y="${cy}" text-anchor="start" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" opacity="0.7" pointer-events="none">${+val.toFixed(1)}${unit}</text>`;
+        }).join("");
+      }
+
       svgContent = `
         ${showFill ? `<path d="${fill}" fill="${color}" opacity="0.12" />` : ""}
         <path d="${line}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="transition:stroke-dashoffset 0.6s ease" />
         ${showDots ? coords.map((c) => `<circle cx="${c.sx}" cy="${c.sy}" r="2.5" fill="${color}" />`).join("") : ""}
         <circle cx="${last.sx}" cy="${last.sy}" r="3.5" fill="${color}" />
         ${config.show_end_label !== false ? `<text x="${labelX}" y="${last.sy + 4}" text-anchor="${textAnchor}" fill="${color}" font-size="9" font-weight="600">${displayVal}</text>` : ""}
+        ${yAxisSvg}
         <rect id="tip-overlay" x="${PAD}" y="0" width="${GW - PAD * 2}" height="${GH}" fill="transparent" style="cursor:crosshair"/>
         <g id="tip" style="display:none;pointer-events:none;">
           <line x1="0" y1="${PAD}" x2="0" y2="${GH - PAD}" stroke="${color}" stroke-width="1" opacity="0.4" vector-effect="non-scaling-stroke"/>
@@ -270,6 +304,7 @@ class LineGraphCard extends HTMLElement {
           <text id="tip-lbl" fill="white" font-size="7" text-anchor="middle" dominant-baseline="middle" opacity="0.85"/>
           <text id="tip-txt" fill="white" font-size="8" font-weight="600" text-anchor="middle" dominant-baseline="middle"/>
         </g>
+        ${xAxisSvg}
       `;
     } else {
       this._renderedCoords = null;
@@ -326,7 +361,7 @@ class LineGraphCard extends HTMLElement {
             </div>
             <div class="current-value">${currentDisplay}</div>
           </div>
-          <svg viewBox="0 0 ${GW} ${GH}">
+          <svg viewBox="0 0 ${GW} ${totalH}">
             ${svgContent}
           </svg>
         </div>
@@ -467,6 +502,12 @@ class LineGraphCardEditor extends HTMLElement {
           <div class="row"><label>Label</label><input id="label" type="text" placeholder="e.g. Last 24h" /></div>
           <div class="row"><label>Unit</label><input id="unit" type="text" placeholder="e.g. °C" /></div>
         </div>
+        <div class="row-2">
+          <div class="row"><label>X label count</label><input id="x_label_count" type="number" placeholder="4 (min 2)" min="2" /></div>
+          <div class="row"><label>Y label count</label><input id="y_label_count" type="number" placeholder="3 (min 2)" min="2" /></div>
+        </div>
+        <div class="checkbox-row"><input id="show_x_labels" type="checkbox" /><label for="show_x_labels">Show X axis labels</label></div>
+        <div class="checkbox-row"><input id="show_y_labels" type="checkbox" /><label for="show_y_labels">Show Y axis labels</label></div>
 
         <div class="section">Data</div>
         <div class="row-2">
@@ -509,6 +550,14 @@ class LineGraphCardEditor extends HTMLElement {
         this._set(id, v === "" ? undefined : parseFloat(v));
       });
     }
+    for (const id of ["x_label_count", "y_label_count"]) {
+      const el = get(id);
+      el.value = c[id] ?? "";
+      el.addEventListener("change", (e) => {
+        const v = e.target.value;
+        this._set(id, v === "" ? undefined : Math.max(2, parseInt(v, 10)));
+      });
+    }
 
     const fillEl = get("fill");
     fillEl.checked = c.fill !== false;
@@ -540,6 +589,22 @@ class LineGraphCardEditor extends HTMLElement {
       } else {
         this._config.show_end_label = false;
       }
+      this._fire();
+    });
+
+    const showXLabelsEl = get("show_x_labels");
+    showXLabelsEl.checked = c.show_x_labels !== false;
+    showXLabelsEl.addEventListener("change", (e) => {
+      if (e.target.checked) { delete this._config.show_x_labels; }
+      else { this._config.show_x_labels = false; }
+      this._fire();
+    });
+
+    const showYLabelsEl = get("show_y_labels");
+    showYLabelsEl.checked = c.show_y_labels !== false;
+    showYLabelsEl.addEventListener("change", (e) => {
+      if (e.target.checked) { delete this._config.show_y_labels; }
+      else { this._config.show_y_labels = false; }
       this._fire();
     });
   }

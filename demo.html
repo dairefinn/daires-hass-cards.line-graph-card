@@ -86,9 +86,27 @@
   <daires-hass-cards-line-graph-card id="bg-dark"></daires-hass-cards-line-graph-card>
   <daires-hass-cards-line-graph-card id="bg-tinted"></daires-hass-cards-line-graph-card>
 
-  <h2>x_labels (hover to see labels in tooltip)</h2>
+  <h2>x_labels</h2>
   <daires-hass-cards-line-graph-card id="xlbl-days"></daires-hass-cards-line-graph-card>
   <daires-hass-cards-line-graph-card id="xlbl-times"></daires-hass-cards-line-graph-card>
+
+  <h2>x_label_count</h2>
+  <daires-hass-cards-line-graph-card id="xlbl-count-2"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="xlbl-count-4"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="xlbl-count-8"></daires-hass-cards-line-graph-card>
+
+  <h2>show_x_labels</h2>
+  <daires-hass-cards-line-graph-card id="xlbl-on"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="xlbl-off"></daires-hass-cards-line-graph-card>
+
+  <h2>show_y_labels</h2>
+  <daires-hass-cards-line-graph-card id="ylbl-on"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="ylbl-off"></daires-hass-cards-line-graph-card>
+
+  <h2>y_label_count</h2>
+  <daires-hass-cards-line-graph-card id="ylbl-count-2"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="ylbl-count-3"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="ylbl-count-5"></daires-hass-cards-line-graph-card>
 
   <h2>interactions</h2>
   <daires-hass-cards-line-graph-card id="int-tap-more-info"></daires-hass-cards-line-graph-card>
@@ -211,20 +229,76 @@
       background: "#e3f2fd",
     });
 
+    const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
     // ── x_labels ──────────────────────────────────────────────────────────────
     document.getElementById("xlbl-days").setConfig({
       title: "x_labels: days",
       points: [18, 22, 19, 25, 28, 24, 21],
       unit: "°C", color: "#ff7043",
-      x_labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      label: "Weekly temperature",
+      x_labels: DAYS, label: "Weekly temperature",
     });
     document.getElementById("xlbl-times").setConfig({
       title: "x_labels: hourly",
-      points: WAVE,
-      unit: "%", color: "#03a9f4",
-      x_labels: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`),
-      label: "Last 24 h",
+      points: WAVE, unit: "%", color: "#03a9f4",
+      x_labels: HOURS, label: "Last 24 h",
+    });
+
+    // ── x_label_count ─────────────────────────────────────────────────────────
+    document.getElementById("xlbl-count-2").setConfig({
+      title: "x_label_count: 2 (first + last)",
+      points: WAVE, unit: "%", color: "#03a9f4",
+      x_labels: HOURS, x_label_count: 2,
+    });
+    document.getElementById("xlbl-count-4").setConfig({
+      title: "x_label_count: 4 (default)",
+      points: WAVE, unit: "%", color: "#03a9f4",
+      x_labels: HOURS,
+    });
+    document.getElementById("xlbl-count-8").setConfig({
+      title: "x_label_count: 8",
+      points: WAVE, unit: "%", color: "#03a9f4",
+      x_labels: HOURS, x_label_count: 8,
+    });
+
+    // ── show_x_labels ─────────────────────────────────────────────────────────
+    document.getElementById("xlbl-on").setConfig({
+      title: "show_x_labels: true (default)",
+      points: WAVE, unit: "%", color: "#03a9f4",
+      x_labels: HOURS,
+    });
+    document.getElementById("xlbl-off").setConfig({
+      title: "show_x_labels: false",
+      points: WAVE, unit: "%", color: "#03a9f4",
+      x_labels: HOURS, show_x_labels: false,
+    });
+
+    // ── show_y_labels ─────────────────────────────────────────────────────────
+    document.getElementById("ylbl-on").setConfig({
+      title: "show_y_labels: true (default)",
+      points: WAVE, unit: "%", color: "#9c27b0",
+    });
+    document.getElementById("ylbl-off").setConfig({
+      title: "show_y_labels: false",
+      points: WAVE, unit: "%", color: "#9c27b0",
+      show_y_labels: false,
+    });
+
+    // ── y_label_count ─────────────────────────────────────────────────────────
+    document.getElementById("ylbl-count-2").setConfig({
+      title: "y_label_count: 2 (min + max)",
+      points: WAVE, unit: "%", color: "#ff9800",
+      y_label_count: 2,
+    });
+    document.getElementById("ylbl-count-3").setConfig({
+      title: "y_label_count: 3 (default)",
+      points: WAVE, unit: "%", color: "#ff9800",
+    });
+    document.getElementById("ylbl-count-5").setConfig({
+      title: "y_label_count: 5",
+      points: WAVE, unit: "%", color: "#ff9800",
+      y_label_count: 5,
     });
 
     // ── interactions ──────────────────────────────────────────────────────────

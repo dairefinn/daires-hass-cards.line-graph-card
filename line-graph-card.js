@@ -313,15 +313,67 @@ class LineGraphCard extends HTMLElement {
         ${xAxisSvg}
       `;
     } else if (points.length === 1) {
-      const val = +points[0].y.toFixed(1);
+      const dataVal = points[0].y;
+      const minY = config.min ?? dataVal;
+      const maxY = config.max ?? dataVal;
+      const rangeY = maxY - minY || 1;
+      const toY = (y) => GH - PAD - ((Math.min(Math.max(y, minY), maxY) - minY) / rangeY) * (GH - PAD * 2);
+
+      const val = +dataVal.toFixed(1);
       currentDisplay = `${val}${unit}`;
       const px = GW - PAD;
-      const py = GH / 2;
-      this._renderedCoords = null;
-      this._renderedPoints = null;
+      const py = (maxY > minY) ? toY(dataVal) : GH / 2;
+
+      this._renderedCoords = [{ sx: px, sy: py }];
+      this._renderedPoints = points;
+
+      let yAxisSvg = "";
+      if (showYLabels) {
+        const yCount = Math.max(2, config.y_label_count ?? 3);
+        if (maxY > minY) {
+          yAxisSvg = Array.from({ length: yCount }, (_, i) => {
+            const v = minY + (i / (yCount - 1)) * (maxY - minY);
+            const cy = toY(v);
+            return `<text x="${PAD + 2}" y="${cy}" text-anchor="start" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" opacity="0.7" pointer-events="none">${+v.toFixed(1)}${unit}</text>`;
+          }).join("");
+        } else {
+          yAxisSvg = `<text x="${PAD + 2}" y="${py}" text-anchor="start" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" opacity="0.7" pointer-events="none">${val}${unit}</text>`;
+        }
+      }
+
+      let xAxisSvg = "";
+      if (showXLabels) {
+        if (this._config.entity) {
+          totalH = GH + LABEL_H;
+          const xCount = Math.max(2, config.x_label_count ?? 4);
+          const windowEnd = Date.now();
+          const windowStart = windowEnd - (config.hours ?? 24) * 3600 * 1000;
+          xAxisSvg = Array.from({ length: xCount }, (_, i) => {
+            const ts = windowStart + (i / (xCount - 1)) * (windowEnd - windowStart);
+            const lbl = this._formatTime(ts);
+            const cx = PAD + (i / (xCount - 1)) * (GW - PAD * 2);
+            const anchor = i === 0 ? "start" : i === xCount - 1 ? "end" : "middle";
+            return `<text x="${cx}" y="${GH + LABEL_H / 2}" text-anchor="${anchor}" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" pointer-events="none">${lbl}</text>`;
+          }).join("");
+        } else if (points[0].label) {
+          totalH = GH + LABEL_H;
+          xAxisSvg = `<text x="${px}" y="${GH + LABEL_H / 2}" text-anchor="end" fill="var(--secondary-text-color, #727272)" font-size="7" dominant-baseline="middle" pointer-events="none">${points[0].label}</text>`;
+        }
+      }
+
       svgContent = `
         <circle cx="${px}" cy="${py}" r="3.5" fill="${color}" />
         ${config.show_end_label !== false ? `<text x="${px - 6}" y="${py + 4}" text-anchor="end" fill="${color}" font-size="9" font-weight="600">${val}</text>` : ""}
+        ${yAxisSvg}
+        <rect id="tip-overlay" x="${PAD}" y="0" width="${GW - PAD * 2}" height="${GH}" fill="transparent" style="cursor:crosshair"/>
+        <g id="tip" style="display:none;pointer-events:none;">
+          <line x1="0" y1="${PAD}" x2="0" y2="${GH - PAD}" stroke="${color}" stroke-width="1" opacity="0.4" vector-effect="non-scaling-stroke"/>
+          <circle id="tip-dot" cx="0" cy="0" r="4" fill="${color}"/>
+          <rect id="tip-bg" rx="3" fill="${color}" opacity="0.9"/>
+          <text id="tip-lbl" fill="white" font-size="7" text-anchor="middle" dominant-baseline="middle" opacity="0.85"/>
+          <text id="tip-txt" fill="white" font-size="8" font-weight="600" text-anchor="middle" dominant-baseline="middle"/>
+        </g>
+        ${xAxisSvg}
       `;
     } else {
       this._renderedCoords = null;

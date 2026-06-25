@@ -81,6 +81,11 @@
   <daires-hass-cards-line-graph-card id="range-zero"></daires-hass-cards-line-graph-card>
   <daires-hass-cards-line-graph-card id="range-explicit"></daires-hass-cards-line-graph-card>
 
+  <h2>single data point</h2>
+  <daires-hass-cards-line-graph-card id="single-auto"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="single-range"></daires-hass-cards-line-graph-card>
+  <daires-hass-cards-line-graph-card id="single-no-fill"></daires-hass-cards-line-graph-card>
+
   <h2>background</h2>
   <daires-hass-cards-line-graph-card id="bg-white"></daires-hass-cards-line-graph-card>
   <daires-hass-cards-line-graph-card id="bg-dark"></daires-hass-cards-line-graph-card>
@@ -214,6 +219,20 @@
     document.getElementById("range-explicit").setConfig({
       title: "min: 0  max: 100", points: SPARSE, unit: "%", color: "#ff9800", min: 0, max: 100,
       label: "Explicit full range",
+    });
+
+    // ── single data point ─────────────────────────────────────────────────────
+    document.getElementById("single-auto").setConfig({
+      title: "Disk Usage", points: [73.4], unit: "%", color: "#ff9800",
+      label: "Single point · no range",
+    });
+    document.getElementById("single-range").setConfig({
+      title: "Disk Usage", points: [73.4], unit: "%", color: "#ff9800",
+      label: "Single point · min: 0  max: 100", min: 0, max: 100,
+    });
+    document.getElementById("single-no-fill").setConfig({
+      title: "Disk Usage", points: [73.4], unit: "%", color: "#ff9800",
+      label: "Single point · fill: false", min: 0, max: 100, fill: false,
     });
 
     // ── background ────────────────────────────────────────────────────────────

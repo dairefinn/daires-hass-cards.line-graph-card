@@ -361,7 +361,12 @@ class LineGraphCard extends HTMLElement {
         }
       }
 
+      const singleLine = `M ${PAD} ${py} L ${px} ${py}`;
+      const singleFill = `M ${PAD} ${py} L ${px} ${py} L ${px} ${GH - PAD} L ${PAD} ${GH - PAD} Z`;
+
       svgContent = `
+        ${showFill ? `<path d="${singleFill}" fill="${color}" opacity="0.12" />` : ""}
+        <path d="${singleLine}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
         <circle cx="${px}" cy="${py}" r="3.5" fill="${color}" />
         ${config.show_end_label !== false ? `<text x="${px - 6}" y="${py + 4}" text-anchor="end" fill="${color}" font-size="9" font-weight="600">${val}</text>` : ""}
         ${yAxisSvg}

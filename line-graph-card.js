@@ -263,15 +263,20 @@ class LineGraphCard extends HTMLElement {
       let xAxisSvg = "";
       if (showXLabels && hasXLabels) {
         totalH = GH + LABEL_H;
-        const xCount = Math.max(2, Math.min(config.x_label_count ?? 4, points.length));
+        const xCount = Math.max(2, config.x_label_count ?? 4);
         xAxisSvg = Array.from({ length: xCount }, (_, i) => {
           const targetX = minX + (i / (xCount - 1)) * rangeX;
-          let nearestIdx = 0, minDist = Infinity;
-          for (let j = 0; j < points.length; j++) {
-            const d = Math.abs(points[j].x - targetX);
-            if (d < minDist) { minDist = d; nearestIdx = j; }
+          let lbl;
+          if (this._config.entity) {
+            lbl = this._formatTime(targetX);
+          } else {
+            let nearestIdx = 0, minDist = Infinity;
+            for (let j = 0; j < points.length; j++) {
+              const d = Math.abs(points[j].x - targetX);
+              if (d < minDist) { minDist = d; nearestIdx = j; }
+            }
+            lbl = points[nearestIdx].label;
           }
-          const lbl = points[nearestIdx].label;
           if (!lbl) return "";
           const cx = toX(targetX);
           const anchor = i === 0 ? "start" : i === xCount - 1 ? "end" : "middle";

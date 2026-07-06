@@ -2,7 +2,7 @@
 
 A historical line graph card for Home Assistant. Fetches entity history via the HA API and renders a smooth SVG curve with an optional area fill.
 
-<img width="1023" height="875" alt="image" src="https://github.com/user-attachments/assets/5097d18a-502c-43b9-8aa8-8a5934210624" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/44b08657-4274-4164-a40e-38ee95bd6fd3" />
 
 ## Installation
 

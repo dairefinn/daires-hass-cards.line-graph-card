@@ -378,18 +378,23 @@ class LineGraphCard extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; }
+        :host { display: block; height: 100%; }
+        ha-card { display: block; height: 100%; }
         .card {
           background: ${background};
           border-radius: 12px;
           padding: 16px;
           box-sizing: border-box;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
         }
         .header {
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
           margin-bottom: 12px;
+          flex-shrink: 0;
         }
         .header-left {
           display: flex;
@@ -411,6 +416,8 @@ class LineGraphCard extends HTMLElement {
           color: var(--primary-text-color, #212121);
         }
         svg {
+          flex: 1;
+          min-height: 80px;
           width: 100%;
           display: block;
           overflow: visible;
@@ -426,7 +433,7 @@ class LineGraphCard extends HTMLElement {
             </div>
             <div class="current-value">${currentDisplay}</div>
           </div>
-          <svg viewBox="0 0 ${GW} ${totalH}">
+          <svg viewBox="0 0 ${GW} ${totalH}" preserveAspectRatio="none">
             ${svgContent}
           </svg>
         </div>
